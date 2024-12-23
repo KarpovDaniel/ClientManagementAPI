@@ -21,7 +21,8 @@ public class FoundersController : ControllerBase
     public async Task<ActionResult<IEnumerable<FounderDto>>> GetFounders()
     {
         var founders = await _context.Founders
-            .Include(f => f.Client) 
+            .AsNoTracking()
+            .Include(f => f.Client)
             .Select(f => new FounderDto
             {
                 INN = f.INN,
@@ -35,7 +36,10 @@ public class FoundersController : ControllerBase
                     Name = f.Client.Name,
                     Type = f.Client.Type,
                     DateAdded = f.Client.DateAdded,
-                    DateUpdated = f.Client.DateUpdated
+                    DateUpdated = f.Client.DateUpdated,
+                    FounderNames = f.Client.Type == "LegalEntity"
+                        ? f.Client.Founders.Select(f1 => f1.FullName).ToList()
+                        : new List<string>()
                 }
             })
             .ToListAsync();
@@ -47,7 +51,8 @@ public class FoundersController : ControllerBase
     public async Task<ActionResult<FounderDto>> GetFounder(long inn)
     {
         var founder = await _context.Founders
-            .Include(f => f.Client) 
+            .AsNoTracking()
+            .Include(f => f.Client)
             .Where(f => f.INN == inn)
             .Select(f => new FounderDto
             {
@@ -62,7 +67,10 @@ public class FoundersController : ControllerBase
                     Name = f.Client.Name,
                     Type = f.Client.Type,
                     DateAdded = f.Client.DateAdded,
-                    DateUpdated = f.Client.DateUpdated
+                    DateUpdated = f.Client.DateUpdated,
+                    FounderNames = f.Client.Type == "LegalEntity"
+                        ? f.Client.Founders.Select(f1 => f1.FullName).ToList()
+                        : new List<string>()
                 }
             })
             .FirstOrDefaultAsync();

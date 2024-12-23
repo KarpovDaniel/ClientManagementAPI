@@ -155,3 +155,5 @@ C:\Users\karpo\RiderProjects\ClientManagementAPI\obj\Debug\net9.0\refint\ClientM
 C:\Users\karpo\RiderProjects\ClientManagementAPI\obj\Debug\net9.0\ClientManagementAPI.pdb
 C:\Users\karpo\RiderProjects\ClientManagementAPI\obj\Debug\net9.0\ClientManagementAPI.genruntimeconfig.cache
 C:\Users\karpo\RiderProjects\ClientManagementAPI\obj\Debug\net9.0\ref\ClientManagementAPI.dll
+C:\Users\karpo\RiderProjects\ClientManagementAPI\obj\Debug\net9.0\ClientManagementAPI.sourcelink.json
+C:\Users\karpo\RiderProjects\ClientManagementAPI\bin\Debug\net9.0\Swashbuckle.AspNetCore.Annotations.dll

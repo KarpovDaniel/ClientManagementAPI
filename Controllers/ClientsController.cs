@@ -21,6 +21,7 @@ public class ClientsController : ControllerBase
     public async Task<ActionResult<IEnumerable<ClientDto>>> GetClients()
     {
         var clients = await _context.Clients
+            .AsNoTracking()
             .Select(c => new ClientDto
             {
                 INN = c.INN,
@@ -28,9 +29,9 @@ public class ClientsController : ControllerBase
                 Type = c.Type,
                 DateAdded = c.DateAdded,
                 DateUpdated = c.DateUpdated,
-                FounderNames = c.Type == "LegalEntity" ?
-                    _context.Founders.Where(f => f.ClientINN == c.INN).Select(f => f.FullName).ToList() :
-                    new List<string>()
+                FounderNames = c.Type == "LegalEntity"
+                    ? _context.Founders.Where(f => f.ClientINN == c.INN).Select(f => f.FullName).ToList()
+                    : new List<string>()
             })
             .ToListAsync();
 
@@ -41,6 +42,7 @@ public class ClientsController : ControllerBase
     public async Task<ActionResult<ClientDto>> GetClient(long inn)
     {
         var client = await _context.Clients
+            .AsNoTracking()
             .Where(c => c.INN == inn)
             .Select(c => new ClientDto
             {
@@ -49,8 +51,9 @@ public class ClientsController : ControllerBase
                 Type = c.Type,
                 DateAdded = c.DateAdded,
                 DateUpdated = c.DateUpdated,
-                FounderNames = c.Type == "LegalEntity" ?
-                    _context.Founders.Where(f => f.ClientINN == c.INN).Select(f => f.FullName).ToList() : new List<string>()
+                FounderNames = c.Type == "LegalEntity"
+                    ? _context.Founders.Where(f => f.ClientINN == c.INN).Select(f => f.FullName).ToList()
+                    : new List<string>()
             })
             .FirstOrDefaultAsync();
 
