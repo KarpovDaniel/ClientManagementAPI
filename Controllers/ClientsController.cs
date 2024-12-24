@@ -15,14 +15,7 @@ public class ClientsController(ApplicationDbContext context) : ControllerBase
     {
         var clients = await context.Clients
             .AsNoTracking()
-            .Select(c => new ClientDto
-            {
-                INN = c.INN,
-                Name = c.Name,
-                Type = c.Type,
-                DateAdded = c.DateAdded,
-                DateUpdated = c.DateUpdated
-            })
+            .Select(c => c.ToDto())
             .ToListAsync();
 
         return Ok(clients);
@@ -31,30 +24,25 @@ public class ClientsController(ApplicationDbContext context) : ControllerBase
     [HttpGet("{inn:long}")]
     public async Task<ActionResult<ClientDto>> GetClient(long inn)
     {
-        var client = await context.Clients
-            .AsNoTracking()
-            .Where(c => c.INN == inn)
-            .Select(c => new ClientDto
-            {
-                INN = c.INN,
-                Name = c.Name,
-                Type = c.Type,
-                DateAdded = c.DateAdded,
-                DateUpdated = c.DateUpdated
-            })
-            .FirstOrDefaultAsync();
+        var client = await context.Clients.FindAsync(inn);
 
         if (client == null)
         {
             return NotFound();
         }
 
-        return Ok(client);
+        return Ok(client.ToDto());
     }
 
     [HttpPost]
-    public async Task<ActionResult<Client>> PostClient([FromBody] ClientDto clientDto)
+    public async Task<ActionResult<ClientDto>> PostClient([FromBody] ClientDto clientDto)
     {
+        var existingClient = await context.Clients.FindAsync(clientDto.INN);
+        if (existingClient != null)
+        {
+            return Conflict("Клиент с таким ИНН уже существует.");
+        }
+
         var client = new Client
         {
             INN = clientDto.INN,
@@ -65,7 +53,7 @@ public class ClientsController(ApplicationDbContext context) : ControllerBase
         context.Clients.Add(client);
         await context.SaveChangesAsync();
 
-        return CreatedAtAction(nameof(GetClient), new { inn = client.INN }, client);
+        return CreatedAtAction(nameof(GetClient), new { inn = client.INN }, client.ToDto());
     }
 
     [HttpPut("{inn:long}")]

@@ -16,22 +16,7 @@ public class FoundersController(ApplicationDbContext context) : ControllerBase
         var founders = await context.Founders
             .AsNoTracking()
             .Include(f => f.Client)
-            .Select(f => new FounderDto
-            {
-                INN = f.INN,
-                FullName = f.FullName,
-                DateAdded = f.DateAdded,
-                DateUpdated = f.DateUpdated,
-                ClientINN = f.ClientINN,
-                ClientDto = new ClientDto
-                {
-                    INN = f.Client.INN,
-                    Name = f.Client.Name,
-                    Type = f.Client.Type,
-                    DateAdded = f.Client.DateAdded,
-                    DateUpdated = f.Client.DateUpdated
-                }
-            })
+            .Select(f => f.ToDto())
             .ToListAsync();
 
         return Ok(founders);
@@ -44,22 +29,7 @@ public class FoundersController(ApplicationDbContext context) : ControllerBase
             .AsNoTracking()
             .Include(f => f.Client)
             .Where(f => f.INN == inn)
-            .Select(f => new FounderDto
-            {
-                INN = f.INN,
-                FullName = f.FullName,
-                DateAdded = f.DateAdded,
-                DateUpdated = f.DateUpdated,
-                ClientINN = f.ClientINN,
-                ClientDto = new ClientDto
-                {
-                    INN = f.Client.INN,
-                    Name = f.Client.Name,
-                    Type = f.Client.Type,
-                    DateAdded = f.Client.DateAdded,
-                    DateUpdated = f.Client.DateUpdated
-                }
-            })
+            .Select(f => f.ToDto())
             .FirstOrDefaultAsync();
 
         if (founder == null)
@@ -73,6 +43,12 @@ public class FoundersController(ApplicationDbContext context) : ControllerBase
     [HttpPost]
     public async Task<ActionResult<FounderDto>> PostFounder([FromBody] FounderDto founderDto)
     {
+        var existingFounder = await context.Founders.FindAsync(founderDto.INN);
+        if (existingFounder != null)
+        {
+            return Conflict("Учредитель с таким ИНН уже существует.");
+        }
+
         var client = await context.Clients.FindAsync(founderDto.ClientINN);
         if (client is not { Type: "ЮЛ" })
         {
@@ -90,7 +66,7 @@ public class FoundersController(ApplicationDbContext context) : ControllerBase
         context.Founders.Add(founder);
         await context.SaveChangesAsync();
 
-        return CreatedAtAction(nameof(GetFounder), new { inn = founder.INN }, founder.ToFounderDto());
+        return CreatedAtAction(nameof(GetFounder), new { inn = founder.INN }, founder.ToDto());
     }
 
     [HttpPut("{inn:long}")]
