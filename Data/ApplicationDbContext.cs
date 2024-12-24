@@ -3,13 +3,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ClientManagementAPI.Data;
 
-public class ApplicationDbContext : DbContext
+public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : DbContext(options)
 {
-    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-        : base(options)
-    {
-    }
-
     public DbSet<Client> Clients { get; set; }
     public DbSet<Founder> Founders { get; set; }
 
@@ -41,13 +36,5 @@ public class ApplicationDbContext : DbContext
             .HasOne(f => f.Client)
             .WithMany(c => c.Founders)
             .HasForeignKey(f => f.ClientINN);
-
-        modelBuilder.Entity<Client>()
-            .HasIndex(c => c.INN)
-            .IsUnique();
-
-        modelBuilder.Entity<Founder>()
-            .HasIndex(f => f.INN)
-            .IsUnique();
     }
 }

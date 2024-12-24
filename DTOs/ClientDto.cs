@@ -11,6 +11,4 @@ public class ClientDto
     [SwaggerSchema(ReadOnly = true)] public DateOnly DateAdded { get; init; }
 
     [SwaggerSchema(ReadOnly = true)] public DateOnly DateUpdated { get; init; }
-
-    [SwaggerSchema(ReadOnly = true)] public List<string>? FounderNames { get; set; }
 }

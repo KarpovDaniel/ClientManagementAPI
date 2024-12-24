@@ -8,19 +8,12 @@ namespace ClientManagementAPI.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-public class FoundersController : ControllerBase
+public class FoundersController(ApplicationDbContext context) : ControllerBase
 {
-    private readonly ApplicationDbContext _context;
-
-    public FoundersController(ApplicationDbContext context)
-    {
-        _context = context;
-    }
-
     [HttpGet]
     public async Task<ActionResult<IEnumerable<FounderDto>>> GetFounders()
     {
-        var founders = await _context.Founders
+        var founders = await context.Founders
             .AsNoTracking()
             .Include(f => f.Client)
             .Select(f => new FounderDto
@@ -36,10 +29,7 @@ public class FoundersController : ControllerBase
                     Name = f.Client.Name,
                     Type = f.Client.Type,
                     DateAdded = f.Client.DateAdded,
-                    DateUpdated = f.Client.DateUpdated,
-                    FounderNames = f.Client.Type == "LegalEntity"
-                        ? f.Client.Founders.Select(f1 => f1.FullName).ToList()
-                        : new List<string>()
+                    DateUpdated = f.Client.DateUpdated
                 }
             })
             .ToListAsync();
@@ -47,10 +37,10 @@ public class FoundersController : ControllerBase
         return Ok(founders);
     }
 
-    [HttpGet("{inn}")]
+    [HttpGet("{inn:long}")]
     public async Task<ActionResult<FounderDto>> GetFounder(long inn)
     {
-        var founder = await _context.Founders
+        var founder = await context.Founders
             .AsNoTracking()
             .Include(f => f.Client)
             .Where(f => f.INN == inn)
@@ -67,10 +57,7 @@ public class FoundersController : ControllerBase
                     Name = f.Client.Name,
                     Type = f.Client.Type,
                     DateAdded = f.Client.DateAdded,
-                    DateUpdated = f.Client.DateUpdated,
-                    FounderNames = f.Client.Type == "LegalEntity"
-                        ? f.Client.Founders.Select(f1 => f1.FullName).ToList()
-                        : new List<string>()
+                    DateUpdated = f.Client.DateUpdated
                 }
             })
             .FirstOrDefaultAsync();
@@ -86,85 +73,65 @@ public class FoundersController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<FounderDto>> PostFounder([FromBody] FounderDto founderDto)
     {
-        var client = await _context.Clients.FirstOrDefaultAsync(c => c.INN == founderDto.ClientINN);
-        if (client is not { Type: "LegalEntity" })
+        var client = await context.Clients.FindAsync(founderDto.ClientINN);
+        if (client is not { Type: "ЮЛ" })
         {
-            return BadRequest("Client must be a Legal Entity.");
+            return BadRequest("Клиент должен быть юридическим лицом.");
         }
 
         var founder = new Founder
         {
             INN = founderDto.INN,
             FullName = founderDto.FullName,
-            DateAdded = DateOnly.FromDateTime(DateTime.Now),
-            DateUpdated = DateOnly.FromDateTime(DateTime.Now),
             ClientINN = founderDto.ClientINN,
             Client = client
         };
 
-        _context.Founders.Add(founder);
-        await _context.SaveChangesAsync();
+        context.Founders.Add(founder);
+        await context.SaveChangesAsync();
 
         return CreatedAtAction(nameof(GetFounder), new { inn = founder.INN }, founder.ToFounderDto());
     }
 
-    [HttpPut("{inn}")]
+    [HttpPut("{inn:long}")]
     public async Task<IActionResult> PutFounder(long inn, FounderDto founderDto)
     {
-        var existingFounder = await _context.Founders.FirstOrDefaultAsync(f => f.INN == inn);
+        var existingFounder = await context.Founders.FindAsync(inn);
         if (existingFounder == null)
         {
             return NotFound();
         }
 
-        var client = await _context.Clients.FirstOrDefaultAsync(c => c.INN == founderDto.ClientINN);
-        if (client is not { Type: "LegalEntity" })
+        var client = await context.Clients.FindAsync(founderDto.ClientINN);
+        if (client is not { Type: "ЮЛ" })
         {
             return BadRequest("Client must be a Legal Entity.");
         }
 
         existingFounder.INN = founderDto.INN;
         existingFounder.FullName = founderDto.FullName;
-        existingFounder.DateUpdated = DateOnly.FromDateTime(DateTime.Now);
         existingFounder.ClientINN = founderDto.ClientINN;
         existingFounder.Client = client;
 
-        _context.Entry(existingFounder).State = EntityState.Modified;
+        context.Entry(existingFounder).State = EntityState.Modified;
 
-        try
-        {
-            await _context.SaveChangesAsync();
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            if (!FounderExists(inn))
-            {
-                return NotFound();
-            }
-
-            throw;
-        }
+        await context.SaveChangesAsync();
 
         return NoContent();
     }
 
-    [HttpDelete("{inn}")]
+    [HttpDelete("{inn:long}")]
     public async Task<IActionResult> DeleteFounder(long inn)
     {
-        var founder = await _context.Founders.FindAsync(inn);
+        var founder = await context.Founders.FindAsync(inn);
         if (founder == null)
         {
             return NotFound();
         }
 
-        _context.Founders.Remove(founder);
-        await _context.SaveChangesAsync();
+        context.Founders.Remove(founder);
+        await context.SaveChangesAsync();
 
         return NoContent();
-    }
-
-    private bool FounderExists(long inn)
-    {
-        return _context.Founders.Any(e => e.INN == inn);
     }
 }

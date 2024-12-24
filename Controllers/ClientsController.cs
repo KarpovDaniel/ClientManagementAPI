@@ -8,19 +8,12 @@ namespace ClientManagementAPI.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-public class ClientsController : ControllerBase
+public class ClientsController(ApplicationDbContext context) : ControllerBase
 {
-    private readonly ApplicationDbContext _context;
-
-    public ClientsController(ApplicationDbContext context)
-    {
-        _context = context;
-    }
-
     [HttpGet]
     public async Task<ActionResult<IEnumerable<ClientDto>>> GetClients()
     {
-        var clients = await _context.Clients
+        var clients = await context.Clients
             .AsNoTracking()
             .Select(c => new ClientDto
             {
@@ -28,20 +21,17 @@ public class ClientsController : ControllerBase
                 Name = c.Name,
                 Type = c.Type,
                 DateAdded = c.DateAdded,
-                DateUpdated = c.DateUpdated,
-                FounderNames = c.Type == "LegalEntity"
-                    ? _context.Founders.Where(f => f.ClientINN == c.INN).Select(f => f.FullName).ToList()
-                    : new List<string>()
+                DateUpdated = c.DateUpdated
             })
             .ToListAsync();
 
         return Ok(clients);
     }
 
-    [HttpGet("{inn}")]
+    [HttpGet("{inn:long}")]
     public async Task<ActionResult<ClientDto>> GetClient(long inn)
     {
-        var client = await _context.Clients
+        var client = await context.Clients
             .AsNoTracking()
             .Where(c => c.INN == inn)
             .Select(c => new ClientDto
@@ -50,10 +40,7 @@ public class ClientsController : ControllerBase
                 Name = c.Name,
                 Type = c.Type,
                 DateAdded = c.DateAdded,
-                DateUpdated = c.DateUpdated,
-                FounderNames = c.Type == "LegalEntity"
-                    ? _context.Founders.Where(f => f.ClientINN == c.INN).Select(f => f.FullName).ToList()
-                    : new List<string>()
+                DateUpdated = c.DateUpdated
             })
             .FirstOrDefaultAsync();
 
@@ -72,21 +59,19 @@ public class ClientsController : ControllerBase
         {
             INN = clientDto.INN,
             Name = clientDto.Name,
-            Type = clientDto.Type,
-            DateAdded = DateOnly.FromDateTime(DateTime.Now),
-            DateUpdated = DateOnly.FromDateTime(DateTime.Now)
+            Type = clientDto.Type
         };
 
-        _context.Clients.Add(client);
-        await _context.SaveChangesAsync();
+        context.Clients.Add(client);
+        await context.SaveChangesAsync();
 
         return CreatedAtAction(nameof(GetClient), new { inn = client.INN }, client);
     }
 
-    [HttpPut("{inn}")]
+    [HttpPut("{inn:long}")]
     public async Task<IActionResult> PutClient(long inn, ClientDto clientDto)
     {
-        var existingClient = await _context.Clients.FirstOrDefaultAsync(c => c.INN == inn);
+        var existingClient = await context.Clients.FindAsync(inn);
         if (existingClient == null)
         {
             return NotFound();
@@ -95,44 +80,26 @@ public class ClientsController : ControllerBase
         existingClient.INN = clientDto.INN;
         existingClient.Name = clientDto.Name;
         existingClient.Type = clientDto.Type;
-        existingClient.DateUpdated = DateOnly.FromDateTime(DateTime.Now);
 
-        _context.Entry(existingClient).State = EntityState.Modified;
+        context.Entry(existingClient).State = EntityState.Modified;
 
-        try
-        {
-            await _context.SaveChangesAsync();
-        }
-        catch (DbUpdateConcurrencyException)
-        {
-            if (!ClientExists(inn))
-            {
-                return NotFound();
-            }
-
-            throw;
-        }
+        await context.SaveChangesAsync();
 
         return NoContent();
     }
 
-    [HttpDelete("{inn}")]
+    [HttpDelete("{inn:long}")]
     public async Task<IActionResult> DeleteClient(long inn)
     {
-        var client = await _context.Clients.FindAsync(inn);
+        var client = await context.Clients.FindAsync(inn);
         if (client == null)
         {
             return NotFound();
         }
 
-        _context.Clients.Remove(client);
-        await _context.SaveChangesAsync();
+        context.Clients.Remove(client);
+        await context.SaveChangesAsync();
 
         return NoContent();
-    }
-
-    private bool ClientExists(long inn)
-    {
-        return _context.Clients.Any(e => e.INN == inn);
     }
 }
